@@ -1,3 +1,6 @@
+import Breadcrumb from "../components/breadcrums";
+import Header from "../layouts/header";
+import Sidemenu from "../layouts/sidemenu";
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -57,6 +60,16 @@ const BakeryPOS: React.FC = () => {
   };
 
   return (
+  <>
+    <Header />
+    <Sidemenu />
+      <div className="main-content app-content min-h-screen flex flex-col bg-white-200">
+        <div className="container-fluid flex flex-col flex-grow">
+          <Breadcrumb
+            title="Bakery Inventory Dashboard"
+            links={[{ text: "Dashboard", link: "/dashboard" }]}
+            active="Inventory"
+            />
     <div style={{
       backgroundColor: 'white',
       padding: '300px',
@@ -101,6 +114,9 @@ const BakeryPOS: React.FC = () => {
         ))}
       </ul>
     </div>
+    </div>
+    </div>
+    </>
   );
 };
 

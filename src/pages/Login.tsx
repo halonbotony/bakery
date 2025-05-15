@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import backgroundImage from '../assets/images/background/bg.jpg'; 
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -71,8 +72,7 @@ const LoginPage: React.FC = () => {
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
       style={{
-        backgroundImage:
-          "url('https://i.pinimg.com/736x/3c/92/f6/3c92f62558806e95f2cb596d941f9616.jpg')",
+        backgroundImage: `url(${backgroundImage})`,
       }}
     >
       <div className="w-[25%] p-5 z-10 rounded-lg hover" style={{ backgroundColor: ' #4A102A ' }}>

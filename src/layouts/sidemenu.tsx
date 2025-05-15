@@ -17,6 +17,12 @@ function Sidemenu() {
                                 </center>
                             </Link>
                         </li>
+                         <li className="slide mb-2">
+                            <Link to="/dashboard" className="side-menu__item">
+                                <i className="w-6 h-4 side-menu__icon bi bi-box-seam"></i>
+                                <span className="side-menu__label">Dashboard</span>
+                            </Link>
+                        </li>
                         <li><hr className="mt-3 mb-4" /></li>
                         <li className="slide__category mb-2"><span className="category-name">Bakery POS</span></li>
                         <li className="slide mb-2">
@@ -35,12 +41,6 @@ function Sidemenu() {
                             <Link to="/expiring-soon" className="side-menu__item">
                                 <i className="w-6 h-4 side-menu__icon bi bi-clock"></i>
                                 <span className="side-menu__label">Expiring Soon</span>
-                            </Link>
-                        </li>
-                        <li className="slide mb-2">
-                            <Link to="/payment-method" className="side-menu__item">
-                                <i className="w-6 h-4 side-menu__icon bi bi-wallet2"></i>
-                                <span className="side-menu__label">Payment Method</span>
                             </Link>
                         </li>
                         <li className="slide mb-2">

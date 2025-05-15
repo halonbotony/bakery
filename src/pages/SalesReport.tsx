@@ -1,3 +1,6 @@
+import Breadcrumb from "../components/breadcrums";
+import Header from "../layouts/header";
+import Sidemenu from "../layouts/sidemenu";
 import React, { useState, useEffect } from 'react';
 import { Table, DatePicker, Card, Statistic, Row, Col, Select, Button, Spin, message } from 'antd';
 import { DownloadOutlined, PrinterOutlined, ReloadOutlined, CloseOutlined } from '@ant-design/icons';
@@ -197,6 +200,16 @@ const mockData: SaleItem[] = [
   ];
 
   return (
+     <>
+         <Header />
+                <Sidemenu />
+                <div className="main-content app-content min-h-screen flex flex-col bg-white-200">
+                    <div className="container-fluid flex flex-col flex-grow">
+                        <Breadcrumb
+                            title="Bakery Inventory Dashboard"
+                            links={[{ text: "Dashboard", link: "/dashboard" }]}
+                            active="Inventory"
+                        />
     <div style={{
       backgroundColor: '#ffffff',
       minHeight: '100vh',
@@ -326,6 +339,9 @@ const mockData: SaleItem[] = [
         </Card>
       </div>
     </div>
+      </div>
+    </div>
+      </>
   );
 };
 
