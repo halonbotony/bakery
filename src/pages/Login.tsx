@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import backgroundImage from '../assets/images/background/bg.jpg'; 
+import http from '../api/http';
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,41 +16,30 @@ const LoginPage: React.FC = () => {
   const [emailSent, setEmailSent] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  const handleLogin = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault(); // Prevent form reload
+  setError('');
+  setLoading(true);
 
-    if (!username || !password) {
-      setError('Both username and password are required.');
-      setLoading(false);
-      return;
-    }
+  try {
+    const response = await http.post('/Login', {
+      username: username,
+      password: password,
+    });
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const authResult = mockAuthenticate(username, password);
-    if (authResult) {
-      if (authResult === 'staff') {
-        navigate('/staff');
-      } else if (authResult === 'main') {
-        navigate('/Dashboard');
-      }
+    if (response.status === 200) {
+      localStorage.setItem('accessToken', response.data.accessToken); // Optional
+      navigate('/dashboard');
     } else {
-      setError('Invalid username or password.');
+      setError('Invalid login');
     }
-
+  } catch (error: any) {
+    setError('Login failed');
+    console.error('Login error:', error);
+  } finally {
     setLoading(false);
-  };
-
-  const mockAuthenticate = (username: string, password: string): 'staff' | 'main' | false => {
-    if (username === 'jhonvert' && password === 'jhonvert123') {
-      return 'staff';
-    } else if (username === 'jamesnick' && password === 'jamesnick123') {
-      return 'main';
-    }
-    return false;
-  };
+  }
+};
 
   const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -86,7 +76,7 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
         <h2 className="text-center bg-amber-500 text-2xl font-semibold mb-1 text-white">Welcome!</h2>
-        <form onSubmit={handleLogin} className="space-y-6 bg-amber-500">
+        <form className="space-y-6 bg-amber-500">
           <div>
             <label className="block text-white mb-2">Username</label>
             <div className="flex items-center bg-white rounded-lg px-3 py-2 border">
@@ -133,17 +123,10 @@ const LoginPage: React.FC = () => {
           </div>
           {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
-            type="submit"
             className="w-full bg-blue-600 text-white rounded-md py-2 font-medium hover:bg-blue-700 transition flex justify-center items-center"
-            disabled={loading}
+            onClick={handleLogin}
           >
-            {loading ? (
-              <div className="spinner-border animate-spin inline-block w-8 h-8 border-2 rounded-full" role="status">
-                <span className="visually-hidden"></span>
-              </div>
-            ) : (
-              'Login'
-            )}
+           LogIn
           </button>
           <div className="text-right text-xs text-white mt-4">
             <a href="#" className="hover:underline" onClick={() => setShowForgotPassword(true)}>

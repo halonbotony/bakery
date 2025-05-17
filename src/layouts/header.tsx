@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import http from "../api/http";
 
 function Header() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
 
     // Function to handle logout
-    const handleLogout = () => {
-        setIsLoading(true); // Set loading state to true
-
-        // Simulate a delay to show the loading state
-        setTimeout(() => {
-            localStorage.removeItem("userToken"); // Remove stored token
-            navigate("/"); // Navigate to login page
-            setIsLoading(false); // Set loading state to false after navigation
-        }, 2000); // 2-second delay for demonstration purposes
+    const handleLogout = async () => {
+        console.log("click")
+       localStorage.removeItem("accessToken"); // Remove stored token
+       const response = await http.delete('/log-out',{})
+        if (response.status == 200) {
+            navigate('/')
+        }
     };
 
     return (
@@ -48,13 +47,8 @@ function Header() {
                     <button
                         className="flex items-center gap-2 text-red-600 px-4 py-2 rounded-lg border border-red-600 hover:bg-red-100 transition"
                         onClick={handleLogout}
-                        disabled={isLoading} // Disable the button while loading
                     >
-                        {isLoading ? (
-                            <span className="font-medium">Logging out...</span>
-                        ) : (
-                            <span className="font-medium">Log out</span>
-                        )}
+                        Log out
                     </button>
                 </div>
             </div>
