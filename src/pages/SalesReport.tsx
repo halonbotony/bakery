@@ -3,14 +3,13 @@ import Header from "../layouts/header";
 import Sidemenu from "../layouts/sidemenu";
 import React, { useState, useEffect } from 'react';
 import { Table, DatePicker, Card, Statistic, Row, Col, Select, Button, Spin, message } from 'antd';
-import { DownloadOutlined, PrinterOutlined, ReloadOutlined, CloseOutlined } from '@ant-design/icons';
+import { PrinterOutlined, ReloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
-// Types for our data
+import http from "../api/http";
+
 interface SaleItem {
   id: string;
   productName: string;
@@ -18,7 +17,7 @@ interface SaleItem {
   unitPrice: number;
   totalPrice: number;
   date: string;
-  paymentMethod: 'cash' | 'card' | 'mobile';
+  paymentMethod: 'cash' | 'gcash';
 }
 
 interface SalesSummary {
@@ -29,319 +28,239 @@ interface SalesSummary {
   busiestHour: string;
 }
 
+interface ProductSummary {
+  prodid: number;
+  prodprice: number;
+  total_quantity: number;
+}
+
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-// Helper function to format currency in PHP
 const formatCurrency = (value: number) => {
   return `₱${value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
 };
 
 const SalesReport: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
-    dayjs().startOf('week'),
-    dayjs().endOf('day'),
-  ]);
-  const [salesData, setSalesData] = useState<SaleItem[]>([]);
+  const [prodSummary, setProdSummary] = useState<any[]>([])
+  const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<SalesSummary | null>(null);
+  const [salesData, setSalesData] = useState<SaleItem[]>([]);
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const navigate = useNavigate();
 
-  // Mock data fetch function
-  const fetchSalesData = async () => {
+  const getAll = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-const mockData: SaleItem[] = [
-  // Breads
-  { id: '1', productName: 'Pandesal', quantity: 12, unitPrice: 2.5, totalPrice: 30.0, date: dayjs().subtract(1, 'day').format(), paymentMethod: 'cash' },
-  { id: '2', productName: 'Spanish Bread', quantity: 7, unitPrice: 6.0, totalPrice: 42.0, date: dayjs().subtract(1, 'day').format(), paymentMethod: 'card' },
-  { id: '3', productName: 'Monay', quantity: 5, unitPrice: 4.0, totalPrice: 20.0, date: dayjs().format(), paymentMethod: 'mobile' },
-  { id: '4', productName: 'Ensaymada', quantity: 8, unitPrice: 12.0, totalPrice: 96.0, date: dayjs().format(), paymentMethod: 'cash' },
-  { id: '5', productName: 'Cheese Bread', quantity: 10, unitPrice: 10.0, totalPrice: 100.0, date: dayjs().subtract(2, 'days').format(), paymentMethod: 'card' },
-  { id: '6', productName: 'Brioche Loaf', quantity: 2, unitPrice: 45.0, totalPrice: 90.0, date: dayjs().subtract(2, 'days').format(), paymentMethod: 'cash' },
-  { id: '7', productName: 'Whole Wheat Bread', quantity: 3, unitPrice: 50.0, totalPrice: 150.0, date: dayjs().subtract(3, 'days').format(), paymentMethod: 'mobile' },
-
-  // Cakes
-  { id: '8', productName: 'Red Velvet', quantity: 2, unitPrice: 350, totalPrice: 700, date: dayjs().subtract(1, 'day').format(), paymentMethod: 'cash' },
-  { id: '9', productName: 'Raspberry Cake', quantity: 1, unitPrice: 500, totalPrice: 500, date: dayjs().subtract(1, 'day').format(), paymentMethod: 'card' },
-  { id: '10', productName: 'Oreo Cake', quantity: 1, unitPrice: 450, totalPrice: 450, date: dayjs().format(), paymentMethod: 'mobile' },
-  { id: '11', productName: 'White Forest Cake', quantity: 2, unitPrice: 500, totalPrice: 1000, date: dayjs().format(), paymentMethod: 'cash' },
-  { id: '12', productName: 'Green Velvet Cake', quantity: 1, unitPrice: 550, totalPrice: 550, date: dayjs().subtract(2, 'days').format(), paymentMethod: 'card' },
-  { id: '13', productName: 'Cookies and Cream Cake', quantity: 2, unitPrice: 450, totalPrice: 900, date: dayjs().subtract(2, 'days').format(), paymentMethod: 'mobile' },
-  { id: '14', productName: 'Ube Cake', quantity: 1, unitPrice: 500, totalPrice: 500, date: dayjs().subtract(3, 'days').format(), paymentMethod: 'cash' },
-  { id: '15', productName: 'Black Forest Cake', quantity: 2, unitPrice: 550, totalPrice: 1100, date: dayjs().subtract(3, 'days').format(), paymentMethod: 'mobile' },
-  { id: '16', productName: 'Chocolate Mousse Cake', quantity: 1, unitPrice: 650, totalPrice: 650, date: dayjs().subtract(4, 'days').format(), paymentMethod: 'card' },
-  { id: '17', productName: 'Purple Yam', quantity: 1, unitPrice: 600, totalPrice: 600, date: dayjs().subtract(4, 'days').format(), paymentMethod: 'cash' },
-];
+      const resProd = await http.get('/get-product-summary');
+      const resSales = await http.get('/get-transactionhdr');
+      const getProduct = await http.get('/get-products');
+      const resPopular = await http.get('/get-mostPopular');
 
 
-      // Filter by date range
-      const filtered = mockData.filter(item => {
-        const itemDate = dayjs(item.date);
-        return itemDate.isAfter(dateRange[0]) && itemDate.isBefore(dateRange[1]);
+      setProdSummary(resProd.data.data);
+
+      const salesDetails = resSales.data.data.map((txn: any) => {
+        return {
+          id: txn.transactionID,
+          productName: '-',
+          quantity: 1,
+          unitPrice: txn.transactiontotal,
+          totalPrice: txn.transactiontotal,
+          date: `${txn.date} ${txn.time}`,
+          paymentMethod: txn.transactiontype.toLowerCase(),
+        };
       });
 
-      // Apply payment filter
-      let result = filtered;
-      if (paymentFilter !== 'all') {
-        result = result.filter(item => item.paymentMethod === paymentFilter);
-      }
+      setSalesData(salesDetails);
 
-      setSalesData(result);
-      calculateSummary(result);
-      message.success('Sales data loaded successfully');
+      const busiestHour = resSales.data.data.reduce((acc: Record<string, number>, txn: any) => {
+        const hour = txn.time.split(':')[0];
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+      }, {});
+      const topHour = Object.entries(busiestHour).reduce((max:any, cur:any) => cur[1] > max[1] ? cur : max, ["00", 0])[0];
+
+      setSummaryData({
+        totalSales: salesDetails.reduce((acc : any, cur : any) => acc + cur.totalPrice, 0),
+        totalItemsSold: salesDetails.reduce((acc : any, cur : any) => acc + cur.quantity, 0),
+        averageSale: salesDetails.length ? salesDetails.reduce((acc : any, cur : any) => acc + cur.totalPrice, 0) / salesDetails.length : 0,
+        mostPopularItem: getProduct.data.data.find((p:any) => p.id === resPopular.data.data[0]?.prodid)?.pname || 'N/A',
+        busiestHour: `${topHour}:00`,
+      });
     } catch (error) {
-      message.error('Failed to load sales data');
-      console.error('Error fetching sales data:', error);
-    } finally {
-      setLoading(false);
+      message.error("Error fetching data");
+      console.error(error);
     }
+    setLoading(false);
   };
 
-  // Calculate summary statistics
-  const calculateSummary = (data: SaleItem[]) => {
-    if (data.length === 0) {
-      setSummaryData(null);
-      return;
-    }
-
-    const totalSales = data.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalItemsSold = data.reduce((sum, item) => sum + item.quantity, 0);
-
-    // Find most popular item
-    const itemCounts: Record<string, number> = {};
-    data.forEach(item => {
-      itemCounts[item.productName] = (itemCounts[item.productName] || 0) + item.quantity;
-    });
-    const mostPopularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0][0];
-
-    setSummaryData({
-      totalSales,
-      totalItemsSold,
-      averageSale: totalSales / data.length,
-      mostPopularItem,
-      busiestHour: '10:00 AM',
-    });
-  };
-
-  // Handle date range change
-  const handleDateChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
-    if (dates && dates[0] && dates[1]) {
-      setDateRange([dates[0], dates[1]]);
-    }
-  };
-
-  // Export to PDF
-  const exportToPDF = () => {
-    const input = document.getElementById('sales-report');
-    if (input) {
-      html2canvas(input).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`bakery-sales-report-${dayjs().format('YYYY-MM-DD')}.pdf`);
-      });
-    }
-  };
-
-  // Initial data load
   useEffect(() => {
-    fetchSalesData();
-  }, [dateRange, paymentFilter]);
+    getAll();
+  }, []);
 
-  // Table columns
-  const columns: ColumnsType<SaleItem> = [
+  const filteredSales = salesData.filter(item => {
+    const inDateRange = !dateRange || (dayjs(item.date).isAfter(dateRange[0]) && dayjs(item.date).isBefore(dateRange[1]));
+    const paymentMatches = paymentFilter === 'all' || item.paymentMethod === paymentFilter;
+    return inDateRange && paymentMatches;
+  });
+
+  const columnsSales: ColumnsType<SaleItem> = [
     {
-      title: 'Product',
-      dataIndex: 'productName',
-      key: 'productName',
-      sorter: (a, b) => a.productName.localeCompare(b.productName),
-    },
-    {
-      title: 'Quantity',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      sorter: (a, b) => a.quantity - b.quantity,
-    },
-    {
-      title: 'Unit Price',
-      dataIndex: 'unitPrice',
-      key: 'unitPrice',
-      render: (value: number) => formatCurrency(value),
-      sorter: (a, b) => a.unitPrice - b.unitPrice,
+      title: 'transactionID',
+      dataIndex: 'id',
+      key: 'id',
     },
     {
       title: 'Total',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      render: (value: number) => formatCurrency(value),
-      sorter: (a, b) => a.totalPrice - b.totalPrice,
+      render: formatCurrency,
     },
     {
       title: 'Date',
       dataIndex: 'date',
       key: 'date',
-      render: (date: string) => dayjs(date).format('MMM D, YYYY h:mm A'),
-      sorter: (a, b) => dayjs(a.date).unix() - dayjs(b.date).unix(),
+      render: date => dayjs(date).format('MMM D, YYYY h:mm A'),
     },
     {
       title: 'Payment',
       dataIndex: 'paymentMethod',
       key: 'paymentMethod',
-      render: (method: string) => method.charAt(0).toUpperCase() + method.slice(1),
     },
   ];
 
+  const columnsProdSummary: ColumnsType<ProductSummary> = [
+  {
+    title: 'Product ID',
+    dataIndex: 'prodid',
+    key: 'prodid',
+  },
+  {
+    title: 'Unit Price',
+    dataIndex: 'prodprice',
+    key: 'prodprice',
+    render: (price: number) => formatCurrency(price),
+  },
+  {
+    title: 'Total Quantity Sold',
+    dataIndex: 'total_quantity',
+    key: 'total_quantity',
+  },
+  {
+    title: 'Total Revenue',
+    key: 'total_revenue',
+    render: (_text, record) => formatCurrency(record.prodprice * record.total_quantity),
+  },
+];
+
   return (
-     <>
-         <Header />
-                <Sidemenu />
-                <div className="main-content app-content min-h-screen flex flex-col bg-white-200">
-                    <div className="container-fluid flex flex-col flex-grow">
-                        <Breadcrumb
-                            title="Bakery Inventory Dashboard"
-                            links={[{ text: "Dashboard", link: "/dashboard" }]}
-                            active="Inventory"
-                        />
-    <div style={{
-      backgroundColor: '#ffffff',
-      minHeight: '100vh',
-      padding: '20px'
-    }}>
-      <div id="sales-report" style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        padding: '20px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-      }}>
-        <Card
-          title={<span style={{ textAlign: 'center', display: 'block', width: '100%' }}>Bakery Sales Report</span>}
-          headStyle={{ backgroundColor: '#ffcce6', borderBottom: 'none' }}
-          extra={
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Button icon={<DownloadOutlined />} onClick={exportToPDF}>Export PDF</Button>
-              <Button icon={<PrinterOutlined />} onClick={() => window.print()}>Print</Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchSalesData}>Refresh</Button>
-            </div>
-          }
-          style={{ border: 'none' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-            <Button icon={<CloseOutlined />} style={{ marginRight: '10px' }} onClick={() => navigate('/dashboard')}>Close</Button>
-            <div style={{ flex: 1 }}>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <RangePicker
-                    style={{ width: '100%' }}
-                    value={dateRange}
-                    onChange={handleDateChange}
-                    showTime={{ format: 'HH:mm' }}
-                    format="YYYY-MM-DD HH:mm"
-                  />
-                </Col>
-                <Col span={12}>
-                  <Select
-                    style={{ width: '100%' }}
-                    placeholder="Filter by payment method"
-                    value={paymentFilter}
-                    onChange={setPaymentFilter}
-                  >
-                    <Option value="all">All Payment Methods</Option>
-                    <Option value="cash">Cash</Option>
-                    <Option value="card">Card</Option>
-                    <Option value="mobile">Mobile</Option>
-                  </Select>
-                </Col>
-              </Row>
-            </div>
-          </div>
-
-          {loading && <Spin size="large" style={{ display: 'block', margin: '20px auto' }} />}
-
-          {summaryData && !loading && (
-            <Row gutter={16} style={{ marginBottom: '20px' }}>
-              <Col span={6}>
-                <Card style={{ backgroundColor: '#fff5f7' }}>
-                  <Statistic
-                    title="Total Sales"
-                    value={summaryData.totalSales}
-                    precision={2}
-                    prefix="₱"
-                    formatter={(value) => value.toLocaleString()}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card style={{ backgroundColor: '#fff5f7' }}>
-                  <Statistic
-                    title="Items Sold"
-                    value={summaryData.totalItemsSold}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card style={{ backgroundColor: '#fff5f7' }}>
-                  <Statistic
-                    title="Average Sale"
-                    value={summaryData.averageSale}
-                    precision={2}
-                    prefix="₱"
-                    formatter={(value) => value.toLocaleString()}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card style={{ backgroundColor: '#fff5f7' }}>
-                  <Statistic
-                    title="Most Popular"
-                    value={summaryData.mostPopularItem}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          )}
-
-          <Table
-            columns={columns}
-            dataSource={salesData}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-            style={{ backgroundColor: 'white' }}
-            summary={() => (
-              <Table.Summary fixed>
-                <Table.Summary.Row style={{ backgroundColor: '#fff5f7' }}>
-                  <Table.Summary.Cell index={0} colSpan={2}>
-                    <strong>Total</strong>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={1}>
-                    <strong>
-                      {salesData.reduce((sum, item) => sum + item.quantity, 0)}
-                    </strong>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} />
-                  <Table.Summary.Cell index={3}>
-                    <strong>
-                      {formatCurrency(salesData.reduce((sum, item) => sum + item.totalPrice, 0))}
-                    </strong>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4} colSpan={2} />
-                </Table.Summary.Row>
-              </Table.Summary>
-            )}
+    <>
+      <Header />
+      <Sidemenu />
+      <div className="main-content app-content min-h-screen flex flex-col bg-white-200">
+        <div className="container-fluid flex flex-col flex-grow">
+          <Breadcrumb
+            title="Bakery Inventory Dashboard"
+            links={[{ text: "Dashboard", link: "/dashboard" }]}
+            active="Inventory"
           />
-        </Card>
+          <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '20px' }}>
+            <Card
+              title={<span style={{ textAlign: 'center', display: 'block', width: '100%' }}>Bakery Sales Report</span>}
+              headStyle={{ backgroundColor: '#ffcce6', borderBottom: 'none' }}
+              extra={
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {/* Export PDF button removed */}
+                  <Button icon={<PrinterOutlined />} onClick={() => window.print()}>Print</Button>
+                  <Button icon={<ReloadOutlined />} onClick={getAll}>Refresh</Button>
+                </div>
+              }
+              style={{ border: 'none' }}
+            >
+              {/* Rest of your component unchanged */}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                <Button icon={<CloseOutlined />} style={{ marginRight: '10px' }} onClick={() => navigate('/dashboard')}>Close</Button>
+                <div style={{ flex: 1 }}>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <RangePicker
+                        style={{ width: '100%' }}
+                        value={dateRange}
+                        onChange={(dates) => setDateRange(dates as [Dayjs, Dayjs])}
+                        showTime={{ format: 'HH:mm' }}
+                        format="YYYY-MM-DD HH:mm"
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Select
+                        style={{ width: '100%' }}
+                        value={paymentFilter}
+                        onChange={(value) => setPaymentFilter(value)}
+                      >
+                        <Option value="all">All Payment Methods</Option>
+                        <Option value="cash">Cash</Option>
+                        <Option value="GCash">GCash</Option>
+                      </Select>
+                    </Col>
+                  </Row>
+                </div>
+              </div>
+
+              {loading ? (
+                <Spin size="large" style={{ display: 'block', margin: '20px auto' }} />
+              ) : (
+                summaryData && (
+                  <Row gutter={16} style={{ marginBottom: '20px' }}>
+                    <Col span={6}><Card><Statistic title="Total Sales" value={summaryData.totalSales} prefix="₱" precision={2} /></Card></Col>
+                    <Col span={6}><Card><Statistic title="Items Sold" value={summaryData.totalItemsSold} /></Card></Col>
+                    <Col span={6}><Card><Statistic title="Average Sale" value={summaryData.averageSale} prefix="₱" precision={2} /></Card></Col>
+                    <Col span={6}><Card><Statistic title="Most Popular" value={summaryData.mostPopularItem} /></Card></Col>
+                  </Row>
+                )
+              )}
+              <h2>Sales Summary</h2>
+              <Table
+                columns={columnsSales}
+                dataSource={filteredSales}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+                summary={() => (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row style={{ backgroundColor: '#fff5f7' }}>
+                      <Table.Summary.Cell index={0} colSpan={2}><strong>Total</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}><strong>{filteredSales.reduce((sum, item) => sum + item.quantity, 0)}</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={2} />
+                      <Table.Summary.Cell index={3}><strong>{formatCurrency(filteredSales.reduce((sum, item) => sum + item.totalPrice, 0))}</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={4} colSpan={2} />
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )}
+              />
+              <h2>Product Summary</h2>
+              <Table
+                columns={columnsProdSummary}
+                dataSource={prodSummary}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+                summary={() => (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row style={{ backgroundColor: '#fff5f7' }}>
+                      <Table.Summary.Cell index={0} colSpan={2}><strong>Total</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}><strong>{filteredSales.reduce((sum, item) => sum + item.quantity, 0)}</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={2} />
+                      <Table.Summary.Cell index={3}><strong>{formatCurrency(filteredSales.reduce((sum, item) => sum + item.totalPrice, 0))}</strong></Table.Summary.Cell>
+                      <Table.Summary.Cell index={4} colSpan={2} />
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )}
+              />
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
-      </div>
-    </div>
-      </>
+    </>
   );
 };
 
